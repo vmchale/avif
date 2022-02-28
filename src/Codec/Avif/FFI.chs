@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveDataTypeable #-}
+
 module Codec.Avif.FFI ( avifImageCreate
                       , avifImageCreateEmpty
                       , avifImageDestroy
@@ -18,6 +20,7 @@ module Codec.Avif.FFI ( avifImageCreate
 
 import Control.Exception (Exception)
 import Data.Coerce (coerce)
+import Data.Typeable (Typeable (..))
 import Foreign.C.Types (CInt, CSize)
 import Foreign.Ptr (castPtr, Ptr)
 
@@ -27,7 +30,7 @@ type UInt8 = {# type uint8_t #}
 type UInt32 = {# type uint32_t #}
 
 {# enum avifPixelFormat as AvifPixelFormat {underscoreToCase} #}
-{# enum avifResult as AvifResult {underscoreToCase} deriving (Eq, Show) #}
+{# enum avifResult as AvifResult {underscoreToCase} deriving (Eq, Show, Typeable) #}
 
 instance Exception AvifResult where
 
@@ -54,7 +57,7 @@ data AvifRGBImage
 {# fun avifRGBImageSetDefaults as ^ { castPtr `Ptr AvifRGBImage', castPtr `Ptr AvifImage' } -> `()' #}
 {# fun avifRGBImagePixelSize as ^ { castPtr `Ptr AvifRGBImage' } -> `UInt32' id #}
 
-{# fun avifImageRGBToYUV as ^ { castPtr `Ptr AvifRGBImage', castPtr `Ptr AvifImage' } -> `()' #}
+{# fun avifImageRGBToYUV as ^ { castPtr `Ptr AvifImage', castPtr `Ptr AvifRGBImage' } -> `()' #}
 {# fun avifImageYUVToRGB as ^ { castPtr `Ptr AvifImage', castPtr `Ptr AvifRGBImage' } -> `()' #}
 
 {# fun avifRGBImageFreePixels as ^ { castPtr `Ptr AvifRGBImage' } -> `()' #}
