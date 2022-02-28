@@ -9,9 +9,10 @@ import qualified Data.ByteString as BS
 import Data.ByteString.Internal (memcpy)
 import qualified Data.ByteString.Unsafe as BS
 import Foreign.Ptr (castPtr)
-import Foreign.ForeignPtr (mallocForeignPtrBytes, withForeignPtr)
+import Foreign.ForeignPtr (castForeignPtr, newForeignPtr, mallocForeignPtrBytes, withForeignPtr)
 import Foreign.Marshal (allocaBytes)
 import qualified Data.Vector.Storable as VS
+import System.IO.Unsafe (unsafePerformIO)
 
 #include <avif/avif.h>
 
@@ -21,14 +22,15 @@ throwRes :: AvifResult -> IO ()
 throwRes AvifResultOk = pure ()
 throwRes err          = throwIO err
 
-encode :: Image PixelRGBA16 -> IO BS.ByteString
-encode img = do
+encode :: Image PixelRGBA16 -> BS.ByteString
+encode img = unsafePerformIO $ do
     avifImgPtr <- avifImageCreate (fromIntegral w) (fromIntegral h) 8 AvifPixelFormatYuv444
     res <- allocaBytes {# sizeof avifRGBImage #} $ \rgbImagePtr ->
         allocaBytes {# sizeof avifRWData #} $ \rwDataPtr -> do
             avifRGBImageSetDefaults rgbImagePtr avifImgPtr
 
-            enc <- avifEncoderCreate
+            preEnc <- avifEncoderCreate
+            enc <- castForeignPtr <$> newForeignPtr avifEncoderDestroy (castPtr preEnc)
 
             withForeignPtr imgPtr $ \iPtr -> do
 
@@ -41,15 +43,15 @@ encode img = do
 
                 BS.packCStringLen (castPtr bs, fromIntegral sz)
 
-    pure res
+    res <$ avifImageDestroy avifImgPtr
 
     where (Image w h bytes) = img
           (imgPtr, _) = VS.unsafeToForeignPtr0 bytes
 
--- VS.unsafeFromForeignPtr0
-decode :: BS.ByteString -> IO (Image PixelRGBA16)
-decode bs = BS.unsafeUseAsCStringLen bs $ \(ptr, sz) -> do
-    dec <- avifDecoderCreate
+decode :: BS.ByteString -> Image PixelRGBA16
+decode bs = unsafePerformIO $ BS.unsafeUseAsCStringLen bs $ \(ptr, sz) -> do
+    preDec <- avifDecoderCreate
+    dec <- castForeignPtr <$> newForeignPtr avifDecoderDestroy (castPtr preDec)
     avifImg <- avifImageCreateEmpty
 
     throwRes =<< avifDecoderReadMemory dec avifImg (castPtr ptr) (fromIntegral sz)
@@ -69,4 +71,4 @@ decode bs = BS.unsafeUseAsCStringLen bs $ \(ptr, sz) -> do
 
         withForeignPtr outBytes $ \outPtr -> do
             memcpy (castPtr outPtr) (castPtr pxPtr) (fromIntegral sz')
-            pure $ Image (fromIntegral w) (fromIntegral h) (VS.unsafeFromForeignPtr0 outBytes (fromIntegral sz'))
+            Image (fromIntegral w) (fromIntegral h) (VS.unsafeFromForeignPtr0 outBytes (fromIntegral sz')) <$ avifImageDestroy avifImg

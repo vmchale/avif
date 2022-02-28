@@ -57,7 +57,8 @@ test-suite avif-test
         avif,
         tasty,
         tasty-hunit,
-        bytestring
+        bytestring,
+        deepseq
 
     if impl(ghc >=8.0)
         ghc-options:

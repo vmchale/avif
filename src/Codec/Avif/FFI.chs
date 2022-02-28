@@ -2,8 +2,10 @@ module Codec.Avif.FFI ( avifImageCreate
                       , avifImageCreateEmpty
                       , avifImageDestroy
                       , avifEncoderCreate
+                      , avifEncoderDestroy
                       , avifEncoderWrite
                       , avifDecoderCreate
+                      , avifDecoderDestroy
                       , avifDecoderReadMemory
                       , avifRGBImageSetDefaults
                       , avifRGBImagePixelSize
@@ -36,15 +38,18 @@ data AvifDecoder
 data AvifRwData
 data AvifRGBImage
 
+{# pointer *avifEncoder as AvifEncoderPtr foreign finalizer avifEncoderDestroy as ^ -> AvifEncoder #}
+{# pointer *avifDecoder as AvifDecoderPtr foreign finalizer avifDecoderDestroy as ^ -> AvifDecoder #}
+
 {# fun avifImageCreate as ^ { `CInt', `CInt', `CInt', `AvifPixelFormat' } -> `Ptr AvifImage' castPtr #}
 {# fun avifImageCreateEmpty as ^ { } -> `Ptr AvifImage' castPtr #}
 {# fun avifImageDestroy as ^ { castPtr `Ptr AvifImage' } -> `()' #}
 
 {# fun avifEncoderCreate as ^ { } -> `Ptr AvifEncoder' castPtr #}
-{# fun avifEncoderWrite as ^ { castPtr `Ptr AvifEncoder', castPtr `Ptr AvifImage', castPtr `Ptr AvifRwData' } -> `AvifResult' #}
+{# fun avifEncoderWrite as ^ { `AvifEncoderPtr', castPtr `Ptr AvifImage', castPtr `Ptr AvifRwData' } -> `AvifResult' #}
 
 {# fun avifDecoderCreate as ^ { } -> `Ptr AvifDecoder' castPtr #}
-{# fun avifDecoderReadMemory as ^ { castPtr `Ptr AvifDecoder', castPtr `Ptr AvifImage', castPtr `Ptr UInt8', coerce `CSize' } -> `AvifResult' #}
+{# fun avifDecoderReadMemory as ^ { `AvifDecoderPtr', castPtr `Ptr AvifImage', castPtr `Ptr UInt8', coerce `CSize' } -> `AvifResult' #}
 
 {# fun avifRGBImageSetDefaults as ^ { castPtr `Ptr AvifRGBImage', castPtr `Ptr AvifImage' } -> `()' #}
 {# fun avifRGBImagePixelSize as ^ { castPtr `Ptr AvifRGBImage' } -> `UInt32' id #}
