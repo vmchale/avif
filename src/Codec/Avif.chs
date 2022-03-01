@@ -4,10 +4,12 @@ module Codec.Avif ( encode
 
 import Codec.Avif.FFI
 import Codec.Picture (Image (Image), PixelRGBA16, PixelYCbCr8)
+import Control.Applicative (pure)
 import Control.Exception (throwIO)
 import qualified Data.ByteString as BS
 import Data.ByteString.Internal (memcpy)
 import qualified Data.ByteString.Unsafe as BS
+import Data.Functor ((<$>), (<$))
 import Foreign.Ptr (castPtr)
 import Foreign.ForeignPtr (castForeignPtr, newForeignPtr, mallocForeignPtrBytes, withForeignPtr)
 import Foreign.Marshal (allocaBytes)
@@ -22,6 +24,7 @@ throwRes :: AvifResult -> IO ()
 throwRes AvifResultOk = pure ()
 throwRes err          = throwIO err
 
+{-# NOINLINE encode #-}
 encode :: Image PixelRGBA16 -> BS.ByteString
 encode img = unsafePerformIO $ do
     avifImgPtr <- avifImageCreate (fromIntegral w) (fromIntegral h) 8 AvifPixelFormatYuv444
@@ -35,6 +38,12 @@ encode img = unsafePerformIO $ do
             withForeignPtr imgPtr $ \iPtr -> do
 
                 {# set avifRGBImage.pixels #} rgbImagePtr (castPtr iPtr)
+                -- {# set avifRGBImage.rowBytes #} rgbImagePtr (fromIntegral h)
+                -- {# set avifRGBImage.height #} rgbImagePtr (fromIntegral h)
+                -- {# set avifRGBImage.width #} rgbImagePtr (fromIntegral w)
+                -- =<< {# get avifRGBImage->width #} rgbImagePtr
+
+                avifImageRGBToYUV avifImgPtr rgbImagePtr
 
                 throwRes =<< avifEncoderWrite enc avifImgPtr rwDataPtr
 
@@ -42,16 +51,19 @@ encode img = unsafePerformIO $ do
                 bs <- {# get avifRWData->data #} rwDataPtr
 
                 BS.packCStringLen (castPtr bs, fromIntegral sz)
+                -- <* avifRWDataFree rwDataPtr
 
     res <$ avifImageDestroy avifImgPtr
 
     where (Image w h bytes) = img
           (imgPtr, _) = VS.unsafeToForeignPtr0 bytes
 
+{-# NOINLINE decode #-}
 decode :: BS.ByteString -> Image PixelRGBA16
 decode bs = unsafePerformIO $ BS.unsafeUseAsCStringLen bs $ \(ptr, sz) -> do
     preDec <- avifDecoderCreate
     dec <- castForeignPtr <$> newForeignPtr avifDecoderDestroy (castPtr preDec)
+    -- TODO: do we need destroy?
     avifImg <- avifImageCreateEmpty
 
     throwRes =<< avifDecoderReadMemory dec avifImg (castPtr ptr) (fromIntegral sz)

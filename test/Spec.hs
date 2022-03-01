@@ -1,8 +1,9 @@
 module Main (main) where
 
 import           Codec.Avif
-import           Control.DeepSeq  (deepseq)
-import qualified Data.ByteString  as BS
+import           Control.Applicative ((<$>))
+import           Control.DeepSeq     (deepseq)
+import qualified Data.ByteString     as BS
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
