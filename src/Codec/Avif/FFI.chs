@@ -13,6 +13,7 @@ module Codec.Avif.FFI ( avifImageCreate
                       , avifRGBImagePixelSize
                       , avifImageRGBToYUV
                       , avifImageYUVToRGB
+                      , avifRGBImageAllocatePixels
                       , avifRGBImageFreePixels
                       , AvifPixelFormat (..)
                       , AvifResult (..)
@@ -57,7 +58,8 @@ data AvifRGBImage
 {# fun avifRGBImageSetDefaults as ^ { castPtr `Ptr AvifRGBImage', castPtr `Ptr AvifImage' } -> `()' #}
 {# fun avifRGBImagePixelSize as ^ { castPtr `Ptr AvifRGBImage' } -> `UInt32' id #}
 
-{# fun avifImageRGBToYUV as ^ { castPtr `Ptr AvifImage', castPtr `Ptr AvifRGBImage' } -> `()' #}
-{# fun avifImageYUVToRGB as ^ { castPtr `Ptr AvifImage', castPtr `Ptr AvifRGBImage' } -> `()' #}
+{# fun avifImageRGBToYUV as ^ { castPtr `Ptr AvifImage', castPtr `Ptr AvifRGBImage' } -> `AvifResult' #}
+{# fun avifImageYUVToRGB as ^ { castPtr `Ptr AvifImage', castPtr `Ptr AvifRGBImage' } -> `AvifResult' #}
 
+{# fun avifRGBImageAllocatePixels as ^ { castPtr `Ptr AvifRGBImage' } -> `()' #}
 {# fun avifRGBImageFreePixels as ^ { castPtr `Ptr AvifRGBImage' } -> `()' #}
