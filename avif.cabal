@@ -57,7 +57,7 @@ test-suite avif-test
         avif,
         tasty,
         tasty-hunit,
-        bytestring,
+        bytestring >=0.10.0.0,
         deepseq
 
     if impl(ghc >=8.0)
