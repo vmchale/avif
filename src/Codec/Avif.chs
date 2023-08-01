@@ -4,12 +4,10 @@ module Codec.Avif ( encode
 
 import Codec.Avif.FFI
 import Codec.Picture (Image (Image), PixelRGBA8, PixelYCbCr8)
-import Control.Applicative (pure)
 import Control.Exception (throwIO)
 import qualified Data.ByteString as BS
 import Data.ByteString.Internal (memcpy)
 import qualified Data.ByteString.Unsafe as BS
-import Data.Functor ((<$>), (<$))
 import Foreign.Ptr (castPtr)
 import Foreign.ForeignPtr (castForeignPtr, newForeignPtr, mallocForeignPtrBytes, withForeignPtr)
 import Foreign.Marshal (allocaBytes)
@@ -27,9 +25,10 @@ throwRes AvifResultOk = pure (); throwRes err = throwIO err
 encode :: Image PixelRGBA8 -> BS.ByteString
 encode img = unsafePerformIO $ do
     avifImgPtr <- avifImageCreate (fromIntegral w) (fromIntegral h) 8 AvifPixelFormatYuv444
+    avifImg <- castForeignPtr <$> newForeignPtr avifImageDestroy (castPtr avifImgPtr)
     res <- allocaBytes {# sizeof avifRGBImage #} $ \rgbImagePtr ->
         allocaBytes {# sizeof avifRWData #} $ \rwDataPtr -> do
-            avifRGBImageSetDefaults rgbImagePtr avifImgPtr
+            avifRGBImageSetDefaults rgbImagePtr avifImg
             pxSz <- avifRGBImagePixelSize rgbImagePtr
 
             preEnc <- avifEncoderCreate
@@ -42,16 +41,16 @@ encode img = unsafePerformIO $ do
                 {# set avifRGBImage.pixels #} rgbImagePtr (castPtr iPtr)
                 {# set avifRGBImage.rowBytes #} rgbImagePtr (fromIntegral w*pxSz)
 
-                throwRes =<< avifImageRGBToYUV avifImgPtr rgbImagePtr
+                throwRes =<< avifImageRGBToYUV avifImg rgbImagePtr
 
-                throwRes =<< avifEncoderWrite enc avifImgPtr rwDataPtr
+                throwRes =<< avifEncoderWrite enc avifImg rwDataPtr
 
                 sz <- {# get avifRWData->size #} rwDataPtr
                 bs <- {# get avifRWData->data #} rwDataPtr
 
                 BS.packCStringLen (castPtr bs, fromIntegral sz)
 
-    res <$ avifImageDestroy avifImgPtr
+    pure res
 
     where (Image w h bytes) = img
           (imgPtr, _) = VS.unsafeToForeignPtr0 bytes
@@ -61,7 +60,9 @@ decode :: BS.ByteString -> Image PixelRGBA8
 decode bs = unsafePerformIO $ BS.unsafeUseAsCStringLen bs $ \(ptr, sz) -> do
     preDec <- avifDecoderCreate
     dec <- castForeignPtr <$> newForeignPtr avifDecoderDestroy (castPtr preDec)
-    avifImg <- avifImageCreateEmpty
+
+    avifImgPtr <- avifImageCreateEmpty
+    avifImg <- castForeignPtr <$> newForeignPtr avifImageDestroy (castPtr avifImgPtr)
 
     throwRes =<< avifDecoderReadMemory dec avifImg (castPtr ptr) (fromIntegral sz)
 
@@ -76,10 +77,10 @@ decode bs = unsafePerformIO $ BS.unsafeUseAsCStringLen bs $ \(ptr, sz) -> do
 
         pxPtr <- {# get avifRGBImage->pixels #} rgbImagePtr
 
-        let sz' = w * h * pxSz
+        let sz' = w*h*pxSz
 
         outBytes <- mallocForeignPtrBytes (fromIntegral sz')
 
         withForeignPtr outBytes $ \outPtr -> do
             memcpy (castPtr outPtr) (castPtr pxPtr) (fromIntegral sz')
-            Image (fromIntegral w) (fromIntegral h) (VS.unsafeFromForeignPtr0 outBytes (fromIntegral sz')) <$ (avifRGBImageFreePixels rgbImagePtr *> avifImageDestroy avifImg)
+            Image (fromIntegral w) (fromIntegral h) (VS.unsafeFromForeignPtr0 outBytes (fromIntegral sz')) <$ (avifRGBImageFreePixels rgbImagePtr)
