@@ -34,8 +34,6 @@ encode img = unsafePerformIO $ do
 
             withForeignPtr imgPtr $ \iPtr -> do
 
-                {# set avifRGBImage.height #} rgbImagePtr (fromIntegral h)
-                {# set avifRGBImage.width #} rgbImagePtr (fromIntegral w)
                 {# set avifRGBImage.pixels #} rgbImagePtr (castPtr iPtr)
                 {# set avifRGBImage.rowBytes #} rgbImagePtr (fromIntegral w*pxSz)
 
