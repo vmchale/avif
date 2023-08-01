@@ -27,8 +27,7 @@ import Foreign.Ptr (castPtr, Ptr)
 
 #include <avif/avif.h>
 
-type UInt8 = {# type uint8_t #}
-type UInt32 = {# type uint32_t #}
+type UInt8 = {# type uint8_t #}; type UInt32 = {# type uint32_t #}
 
 {# enum avifPixelFormat as AvifPixelFormat {underscoreToCase} #}
 {# enum avifResult as AvifResult {underscoreToCase} deriving (Eq, Show, Typeable) #}
@@ -37,11 +36,7 @@ instance Exception AvifResult where
 
 {# pointer *avifImage as AvifImagePtr foreign finalizer avifImageDestroy as ^ -> AvifImage #}
 
-data AvifImage
-data AvifEncoder
-data AvifDecoder
-data AvifRwData
-data AvifRGBImage
+data AvifImage; data AvifEncoder; data AvifDecoder; data AvifRwData; data AvifRGBImage
 
 {# pointer *avifEncoder as AvifEncoderPtr foreign finalizer avifEncoderDestroy as ^ -> AvifEncoder #}
 {# pointer *avifDecoder as AvifDecoderPtr foreign finalizer avifDecoderDestroy as ^ -> AvifDecoder #}
