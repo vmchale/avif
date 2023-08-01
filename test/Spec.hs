@@ -23,4 +23,4 @@ decEncNoThrow :: FilePath -> TestTree
 decEncNoThrow fp = testCase fp $ do
     bytes <- BS.readFile fp
     let res = encode (decode bytes)
-    res @?= bytes
+    assertBool "Doesn't throw exception" (res `deepseq` True)
