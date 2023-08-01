@@ -1,6 +1,6 @@
 cabal-version:   1.18
 name:            avif
-version:         0.1.0.0
+version:         0.1.0.1
 license:         AGPL-3
 license-file:    LICENSE
 copyright:       Copyright: (c) 2021 Vanessa McHale
@@ -12,6 +12,8 @@ build-type:      Simple
 extra-doc-files:
     README.md
     CHANGELOG.md
+data-files:
+    test/data/original.avif
 
 source-repository head
     type:     git
