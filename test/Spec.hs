@@ -1,7 +1,6 @@
 module Main (main) where
 
 import           Codec.Avif
-import           Control.Applicative ((<$>))
 import           Control.DeepSeq     (deepseq)
 import qualified Data.ByteString     as BS
 import           Test.Tasty

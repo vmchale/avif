@@ -53,14 +53,14 @@ encode img = unsafePerformIO $ do
 
 {-# NOINLINE decode #-}
 decode :: BS.ByteString -> Image PixelRGBA8
-decode bs = unsafePerformIO $ BS.unsafeUseAsCStringLen bs $ \(ptr, sz) -> do
+decode bs = unsafePerformIO $ BS.unsafeUseAsCStringLen bs $ \(p, sz) -> do
     preDec <- avifDecoderCreate
     dec <- castForeignPtr <$> newForeignPtr avifDecoderDestroy (castPtr preDec)
 
     avifImgPtr <- avifImageCreateEmpty
     avifImg <- castForeignPtr <$> newForeignPtr avifImageDestroy (castPtr avifImgPtr)
 
-    throwRes =<< avifDecoderReadMemory dec avifImg (castPtr ptr) (fromIntegral sz)
+    throwRes =<< avifDecoderReadMemory dec avifImg (castPtr p) (fromIntegral sz)
 
     allocaBytes {# sizeof avifRGBImage #} $ \rgbImagePtr -> do
         avifRGBImageSetDefaults rgbImagePtr avifImg
