@@ -1,3 +1,3 @@
 # avif
 
-Make sure it passes its test suite.
+Haskell bindings to [libavif](https://github.com/AOMediaCodec/libavif).
