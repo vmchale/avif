@@ -3,7 +3,7 @@ module Codec.Avif ( encode
                   ) where
 
 import Codec.Avif.FFI
-import Codec.Picture (Image (Image), PixelRGBA8, PixelYCbCr8)
+import Codec.Picture (Image (Image), PixelRGBA8)
 import Control.Exception (throwIO)
 import qualified Data.ByteString as BS
 import Data.ByteString.Internal (memcpy)
@@ -15,8 +15,6 @@ import qualified Data.Vector.Storable as VS
 import System.IO.Unsafe (unsafePerformIO)
 
 #include <avif/avif.h>
-
--- PixelYCbCr8?
 
 throwRes :: AvifResult -> IO ()
 throwRes AvifResultOk = pure (); throwRes err = throwIO err
