@@ -1,8 +1,11 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main (main) where
 
 import           Codec.Avif
-import           Control.DeepSeq     (deepseq)
-import qualified Data.ByteString     as BS
+import           Control.DeepSeq  (deepseq)
+import qualified Data.ByteString  as BS
+import           Data.Either      (isLeft)
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
@@ -11,7 +14,13 @@ main = defaultMain $
     testGroup "Roundtrip"
         [ decodeNoThrow "test/data/original.avif"
         , decEncNoThrow "test/data/original.avif"
+        , decodeFail
         ]
+
+decodeFail :: TestTree
+decodeFail = testCase "decodeE" $
+    let res = decodeE "aaaaa"
+    in assertBool "fails on bad input" $ isLeft res
 
 decodeNoThrow :: FilePath -> TestTree
 decodeNoThrow fp = testCase fp $ do

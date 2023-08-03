@@ -1,10 +1,12 @@
 module Codec.Avif ( encode
                   , decode
+                  , decodeE
+                  , AvifResult (..)
                   ) where
 
 import Codec.Avif.FFI
 import Codec.Picture (Image (Image), PixelRGBA8)
-import Control.Exception (throwIO)
+import Control.Exception (throw, throwIO)
 import qualified Data.ByteString as BS
 import Data.ByteString.Internal (memcpy)
 import qualified Data.ByteString.Unsafe as BS
@@ -18,6 +20,8 @@ import System.IO.Unsafe (unsafePerformIO)
 
 throwRes :: AvifResult -> IO ()
 throwRes AvifResultOk = pure (); throwRes err = throwIO err
+
+mDo AvifResultOk x = x; mDo e _ = pure (Left e)
 
 {-# NOINLINE encode #-}
 encode :: Image PixelRGBA8 -> BS.ByteString
@@ -51,32 +55,40 @@ encode img = unsafePerformIO $ do
     where (Image w h bytes) = img
           (imgPtr, _) = VS.unsafeToForeignPtr0 bytes
 
-{-# NOINLINE decode #-}
 decode :: BS.ByteString -> Image PixelRGBA8
-decode bs = unsafePerformIO $ BS.unsafeUseAsCStringLen bs $ \(p, sz) -> do
+decode = either throw id.decodeE
+
+{-# NOINLINE decodeE #-}
+-- | @since 0.1.2.0
+decodeE :: BS.ByteString -> Either AvifResult (Image PixelRGBA8)
+decodeE bs = unsafePerformIO $ BS.unsafeUseAsCStringLen bs $ \(p, sz) -> do
     preDec <- avifDecoderCreate
     dec <- castForeignPtr <$> newForeignPtr avifDecoderDestroy (castPtr preDec)
 
     avifImgPtr <- avifImageCreateEmpty
     avifImg <- castForeignPtr <$> newForeignPtr avifImageDestroy (castPtr avifImgPtr)
 
-    throwRes =<< avifDecoderReadMemory dec avifImg (castPtr p) (fromIntegral sz)
+    m <- avifDecoderReadMemory dec avifImg (castPtr p) (fromIntegral sz)
 
-    allocaBytes {# sizeof avifRGBImage #} $ \rgbImagePtr -> do
-        avifRGBImageSetDefaults rgbImagePtr avifImg
-        avifRGBImageAllocatePixels rgbImagePtr
-        throwRes =<< avifImageYUVToRGB avifImg rgbImagePtr
+    mDo m $ do
 
-        w <- {# get avifRGBImage->width #} rgbImagePtr
-        h <- {# get avifRGBImage->height #} rgbImagePtr
-        pxSz <- avifRGBImagePixelSize rgbImagePtr
+        allocaBytes {# sizeof avifRGBImage #} $ \rgbImagePtr -> do
+            avifRGBImageSetDefaults rgbImagePtr avifImg
+            avifRGBImageAllocatePixels rgbImagePtr
+            r <- avifImageYUVToRGB avifImg rgbImagePtr
 
-        pxPtr <- {# get avifRGBImage->pixels #} rgbImagePtr
+            mDo r $ do
 
-        let sz' = w*h*pxSz
+                w <- {# get avifRGBImage->width #} rgbImagePtr
+                h <- {# get avifRGBImage->height #} rgbImagePtr
+                pxSz <- avifRGBImagePixelSize rgbImagePtr
 
-        outBytes <- mallocForeignPtrBytes (fromIntegral sz')
+                pxPtr <- {# get avifRGBImage->pixels #} rgbImagePtr
 
-        withForeignPtr outBytes $ \outPtr -> do
-            memcpy (castPtr outPtr) (castPtr pxPtr) (fromIntegral sz')
-            Image (fromIntegral w) (fromIntegral h) (VS.unsafeFromForeignPtr0 outBytes (fromIntegral sz')) <$ (avifRGBImageFreePixels rgbImagePtr)
+                let sz' = w*h*pxSz
+
+                outBytes <- mallocForeignPtrBytes (fromIntegral sz')
+
+                withForeignPtr outBytes $ \outPtr -> do
+                    memcpy (castPtr outPtr) (castPtr pxPtr) (fromIntegral sz')
+                    Right (Image (fromIntegral w) (fromIntegral h) (VS.unsafeFromForeignPtr0 outBytes (fromIntegral sz'))) <$ (avifRGBImageFreePixels rgbImagePtr)

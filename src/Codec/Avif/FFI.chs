@@ -30,6 +30,8 @@ import Foreign.Ptr (castPtr, Ptr)
 type UInt8 = {# type uint8_t #}; type UInt32 = {# type uint32_t #}
 
 {# enum avifPixelFormat as AvifPixelFormat {underscoreToCase} #}
+
+-- | @since 0.1.2.0
 {# enum avifResult as AvifResult {underscoreToCase} deriving (Eq, Show, Typeable) #}
 
 instance Exception AvifResult where
