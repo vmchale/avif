@@ -8,11 +8,11 @@ import Codec.Avif.FFI
 import Codec.Picture (Image (Image), PixelRGBA8)
 import Control.Exception (throw, throwIO)
 import qualified Data.ByteString as BS
-import Data.ByteString.Internal (memcpy)
 import qualified Data.ByteString.Unsafe as BS
 import Foreign.Ptr (castPtr)
 import Foreign.ForeignPtr (castForeignPtr, newForeignPtr, mallocForeignPtrBytes, withForeignPtr)
 import Foreign.Marshal (allocaBytes)
+import Foreign.Marshal.Utils (copyBytes)
 import qualified Data.Vector.Storable as VS
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -90,5 +90,5 @@ decodeE bs = unsafePerformIO $ BS.unsafeUseAsCStringLen bs $ \(p, sz) -> do
                 outBytes <- mallocForeignPtrBytes (fromIntegral sz')
 
                 withForeignPtr outBytes $ \outPtr -> do
-                    memcpy (castPtr outPtr) (castPtr pxPtr) (fromIntegral sz')
+                    copyBytes (castPtr outPtr) (castPtr pxPtr) (fromIntegral sz')
                     Right (Image (fromIntegral w) (fromIntegral h) (VS.unsafeFromForeignPtr0 outBytes (fromIntegral sz'))) <$ (avifRGBImageFreePixels rgbImagePtr)
