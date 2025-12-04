@@ -1,0 +1,4 @@
+haddock-internal: True
+
+package zlib
+  flags: +bundled-c-zlib
