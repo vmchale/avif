@@ -2,10 +2,11 @@ module Codec.Avif ( encode
                   , decode
                   , decodeE
                   , AvifResult (..)
+                  , RgbImage (..)
                   ) where
 
 import Codec.Avif.FFI
-import Codec.Picture (Image (Image), PixelRGBA8)
+import Codec.Picture (Image (Image), PixelRGBA8, PixelRGBA16)
 import Control.Exception (throw, throwIO)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Unsafe as BS
@@ -55,12 +56,15 @@ encode img = unsafePerformIO $ do
     where (Image w h bytes) = img
           (imgPtr, _) = VS.unsafeToForeignPtr0 bytes
 
-decode :: BS.ByteString -> Image PixelRGBA8
+-- | Cf. 'Codec.Picture.DynamicImage'
+data RgbImage = ImageRGBA8 (Image PixelRGBA8) | ImageRGBA16 (Image PixelRGBA16)
+
+decode :: BS.ByteString -> RgbImage
 decode = either throw id.decodeE
 
 {-# NOINLINE decodeE #-}
 -- | @since 0.1.2.0
-decodeE :: BS.ByteString -> Either AvifResult (Image PixelRGBA8)
+decodeE :: BS.ByteString -> Either AvifResult RgbImage
 decodeE bs = unsafePerformIO $ BS.unsafeUseAsCStringLen bs $ \(p, sz) -> do
     preDec <- avifDecoderCreate
     dec <- castForeignPtr <$> newForeignPtr avifDecoderDestroy (castPtr preDec)
@@ -85,10 +89,12 @@ decodeE bs = unsafePerformIO $ BS.unsafeUseAsCStringLen bs $ \(p, sz) -> do
 
                 pxPtr <- {# get avifRGBImage->pixels #} rgbImagePtr
 
-                let sz' = w*h*pxSz
+                let sz' = fromIntegral (w*h*pxSz) :: Int
 
-                outBytes <- mallocForeignPtrBytes (fromIntegral sz')
+                outBytes <- mallocForeignPtrBytes sz'
 
                 withForeignPtr outBytes $ \outPtr -> do
-                    copyBytes (castPtr outPtr) (castPtr pxPtr) (fromIntegral sz')
-                    Right (Image (fromIntegral w) (fromIntegral h) (VS.unsafeFromForeignPtr0 outBytes (fromIntegral sz'))) <$ (avifRGBImageFreePixels rgbImagePtr)
+                    copyBytes (castPtr outPtr) (castPtr pxPtr) sz'
+                    let img | pxSz==8 = ImageRGBA16 (Image (fromIntegral w) (fromIntegral h) (VS.unsafeFromForeignPtr0 (castForeignPtr outBytes) sz'))
+                            | pxSz==4 = ImageRGBA8 (Image (fromIntegral w) (fromIntegral h) (VS.unsafeFromForeignPtr0 outBytes sz'))
+                    Right img <$ avifRGBImageFreePixels rgbImagePtr
