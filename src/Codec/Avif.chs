@@ -58,7 +58,7 @@ encode img = unsafePerformIO $ do
 
 -- | Cf. 'Codec.Picture.DynamicImage'
 --
--- @since 0.2.0.0
+-- @since 1.0.0.0
 data RgbImage = ImageRGBA8 (Image PixelRGBA8) | ImageRGBA16 (Image PixelRGBA16)
 
 decode :: BS.ByteString -> RgbImage

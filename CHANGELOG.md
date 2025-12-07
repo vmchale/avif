@@ -1,5 +1,9 @@
 # avif
 
+# 1.0.0.0
+
+  * Change signature of `decode` and `decodeE` to handle 16-bit images.
+
 # 0.1.2.0
 
   * Add `decodeE` and `AvifResult`
