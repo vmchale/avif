@@ -7,7 +7,6 @@ module Codec.Avif ( encode
 
 import Codec.Avif.FFI
 import Codec.Picture (Image (Image), PixelRGBA8, PixelRGBA16)
-import Control.DeepSeq (NFData (rnf), deepseq)
 import Control.Exception (throw, throwIO)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Unsafe as BS
@@ -58,11 +57,9 @@ encode img = unsafePerformIO $ do
           (imgPtr, _) = VS.unsafeToForeignPtr0 bytes
 
 -- | Cf. 'Codec.Picture.DynamicImage'
+--
+-- @since 0.2.0.0
 data RgbImage = ImageRGBA8 (Image PixelRGBA8) | ImageRGBA16 (Image PixelRGBA16)
-
-instance NFData RgbImage where
-    rnf (ImageRGBA8 img)  = img `deepseq` ()
-    rnf (ImageRGBA16 img) = img `deepseq` ()
 
 decode :: BS.ByteString -> RgbImage
 decode = either throw id.decodeE
