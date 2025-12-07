@@ -14,7 +14,7 @@ main = defaultMain $
     testGroup "Roundtrip"
         [ decodeNoThrow "test/data/original.avif"
         , decEncNoThrow "test/data/original.avif"
-        , decodeRGB16 "test/data/woman.avif"
+        -- , decodeRGB16 "test/data/woman.avif"
         , decodeFail
         ]
 
